@@ -4,10 +4,12 @@ declare(strict_types=1);
 function save_caption(array $caption): int
 {
     $sql = 'INSERT INTO captions (
-        media_asset_id, topic, tone, target_audience, prompt_text, caption_text, model_name, raw_response_json
+        media_asset_id, topic, tone, target_audience, prompt, prompt_text, caption_text, model_name, raw_response_json
     ) VALUES (
-        :media_asset_id, :topic, :tone, :target_audience, :prompt_text, :caption_text, :model_name, :raw_response_json
+        :media_asset_id, :topic, :tone, :target_audience, :prompt, :prompt_text, :caption_text, :model_name, :raw_response_json
     )';
+
+    $promptText = (string)$caption['prompt_text'];
 
     $stmt = db()->prepare($sql);
     $stmt->execute([
@@ -15,7 +17,8 @@ function save_caption(array $caption): int
         ':topic' => $caption['topic'],
         ':tone' => $caption['tone'] ?? null,
         ':target_audience' => $caption['target_audience'] ?? null,
-        ':prompt_text' => $caption['prompt_text'],
+        ':prompt' => $promptText,
+        ':prompt_text' => $promptText,
         ':caption_text' => $caption['caption_text'],
         ':model_name' => $caption['model_name'] ?? null,
         ':raw_response_json' => $caption['raw_response_json'] ?? null,
