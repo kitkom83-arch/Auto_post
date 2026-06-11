@@ -59,7 +59,6 @@ try {
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );");
 
-    // Upgrade existing Phase 1 database without deleting user data.
     add_column_if_missing($pdo, 'media_assets', 'original_name', 'TEXT');
     add_column_if_missing($pdo, 'media_assets', 'extension', 'TEXT');
     add_column_if_missing($pdo, 'media_assets', 'video_codec', 'TEXT');
@@ -70,11 +69,25 @@ try {
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS captions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        media_asset_id INTEGER,
+        topic TEXT,
+        tone TEXT,
+        target_audience TEXT,
         prompt TEXT NOT NULL,
+        prompt_text TEXT,
         caption_text TEXT NOT NULL,
         model_name TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        raw_response_json TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(media_asset_id) REFERENCES media_assets(id)
     );");
+
+    add_column_if_missing($pdo, 'captions', 'media_asset_id', 'INTEGER REFERENCES media_assets(id)');
+    add_column_if_missing($pdo, 'captions', 'topic', 'TEXT');
+    add_column_if_missing($pdo, 'captions', 'tone', 'TEXT');
+    add_column_if_missing($pdo, 'captions', 'target_audience', 'TEXT');
+    add_column_if_missing($pdo, 'captions', 'prompt_text', 'TEXT');
+    add_column_if_missing($pdo, 'captions', 'raw_response_json', 'TEXT');
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,10 +138,13 @@ try {
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_post_attempts_post ON post_attempts(post_id, created_at);');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_media_assets_kind_created ON media_assets(kind, created_at);');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_media_assets_sha256 ON media_assets(sha256);');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_captions_media_asset_id ON captions(media_asset_id);');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_captions_created_at ON captions(created_at);');
 
     $stmt = $pdo->prepare('INSERT OR IGNORE INTO migrations (name) VALUES (:name)');
     $stmt->execute([':name' => '001_phase1_base_schema']);
     $stmt->execute([':name' => '002_phase2_media_upload_metadata']);
+    $stmt->execute([':name' => '003_phase3_caption_schema']);
 
     $pdo->commit();
 
@@ -136,7 +152,7 @@ try {
     echo "Migration completed.\n";
     echo "Database: " . app_config()['db_path'] . "\n";
     echo "SQLite journal_mode: " . $journalMode . "\n";
-    echo "Phase 2 ready: upload video at /upload.php\n";
+    echo "Phase 3 ready: generate captions at /caption.php\n";
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
