@@ -1,0 +1,19 @@
+{
+    # Optional: email admin@example.com
+}
+
+# Local development
+:8080 {
+    root * /srv/personal-ai-auto-poster/public
+    encode gzip
+    php_fastcgi unix//run/php/php8.3-fpm.sock
+    file_server
+}
+
+# Production example
+# poster.example.com {
+#     root * /srv/personal-ai-auto-poster/public
+#     encode gzip
+#     php_fastcgi unix//run/php/php8.3-fpm.sock
+#     file_server
+# }
